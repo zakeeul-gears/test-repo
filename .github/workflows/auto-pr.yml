@@ -1,0 +1,42 @@
+name: Auto Create PR on Push
+
+on:
+  push:
+    branches:
+      - 'test-/*' # Adjust pattern as needed
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Create Pull Request
+      env:
+        GH_TOKEN: ${{ secrets.ZAKEE_GITHUB_TOKEN }}
+      run: |
+        # Extract branch name
+        BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}")
+        
+        # Skip PR if it's main or dev or other protected branches
+        if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "dev" ]]; then
+          echo "Skip PR creation for protected branch: $BRANCH_NAME"
+          exit 0
+        fi
+
+        # Check if PR already exists
+        PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
+        if [ -n "$PR_EXISTS" ]; then
+          echo "PR already exists for branch $BRANCH_NAME"
+          exit 0
+        fi
+
+        # Create PR
+        gh pr create \
+          --head "$BRANCH_NAME" \
+          --base "master" \
+          --title "Auto PR: $BRANCH_NAME" \
+          --body "This PR was automatically created by GitHub Actions from branch $BRANCH_NAME."
+
