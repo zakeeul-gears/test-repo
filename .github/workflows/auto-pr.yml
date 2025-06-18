@@ -15,7 +15,7 @@ jobs:
 
     - name: Create Pull Request
       env:
-        GH_TOKEN: ${{ secrets.ZAKEE_GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.ZAKEEx_GITHUB_TOKEN }}
       run: |
         # Extract branch name
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}")
