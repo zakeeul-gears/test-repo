@@ -1,42 +1,38 @@
-name: Auto Create PR on Push
+name: Auto Recreate PR on Ready For Review
 
 on:
-  push:
-    branches:
-      - 'test-/*' # Adjust pattern as needed
+  pull_request:
+    types: [ready_for_review]
 
 jobs:
-  create-pull-request:
+  re_create_pr:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Create Pull Request
-      env:
-        GH_TOKEN: ${{ secrets.ZAKEEx_GITHUB_TOKEN }}
-      run: |
-        # Extract branch name
-        BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}")
-        
-        # Skip PR if it's main or dev or other protected branches
-        if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "dev" ]]; then
-          echo "Skip PR creation for protected branch: $BRANCH_NAME"
-          exit 0
-        fi
+      - name: Close original PR and create a new PR
+        env:
+          GH_TOKEN: ${{ secrets.ZAKEEx_GITHUB_TOKEN }}
+        run: |
+          # Only proceed if this PR was originally a draft
+          if [[ "${{ github.event.pull_request.draft }}" == "false" ]]; then
+            echo "PR is already ready for review (not a draft), skipping."
+            exit 0
+          fi
 
-        # Check if PR already exists
-        PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
-        if [ -n "$PR_EXISTS" ]; then
-          echo "PR already exists for branch $BRANCH_NAME"
-          exit 0
-        fi
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
 
-        # Create PR
-        gh pr create \
-          --head "$BRANCH_NAME" \
-          --base "master" \
-          --title "Auto PR: $BRANCH_NAME" \
-          --body "This PR was automatically created by GitHub Actions from branch $BRANCH_NAME."
+          # Close the original PR
+          gh pr close "$PR_NUMBER" --delete-branch=false
 
+          # Create a new PR (not draft)
+          gh pr create \
+            --head "$BRANCH_NAME" \
+            --base "$BASE_BRANCH" \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY"
