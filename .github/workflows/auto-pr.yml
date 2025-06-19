@@ -15,12 +15,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.ZAKEEx_GITHUB_TOKEN }}
         run: |
-          # Only proceed if this PR was originally a draft
-          if [[ "${{ github.event.pull_request.draft }}" == "false" ]]; then
-            echo "PR is already ready for review (not a draft), skipping."
-            exit 0
-          fi
-
           PR_NUMBER="${{ github.event.pull_request.number }}"
           BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
           BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
